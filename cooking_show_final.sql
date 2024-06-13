@@ -4,7 +4,7 @@ use cooking_show;
 show create database cooking_show;
 
 /*Create tables*/
-/*When i delete a tuple, the primary key with auto_increment value must return to the smallest next available number(maybe with update?)*/
+/*When i delete a tuple, the primary key with auto_increment value must return to the smallest next available number*/
 
 create table cuisine_by_country(
 cbc_id int(3) unsigned not null auto_increment, 
@@ -45,8 +45,6 @@ last_update timestamp not null default current_timestamp() ON UPDATE current_tim
 PRIMARY KEY (equip_id) )
 ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
-/*Maybe we dont need it, because we can just use a recipe_step table
-with pk recipe_id and the order of the step*/
 create table step(
 step_id int(7) unsigned not null auto_increment, 
 description varchar(750) not null unique,
@@ -89,12 +87,6 @@ PRIMARY KEY (ingri_id),
 FOREIGN KEY (ingrigr_id) references ingridient_group(ingrigr_id) ON DELETE restrict ON UPDATE cascade) 
 ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci; 												                    
 																														   
-/*create table nutritional_info(
-nutin_id int(10) unsigned not null auto_increment,
-calorie_count int(4),                                  #Will remove it, I just use it for my dummy values 
-last_update timestamp not null default current_timestamp() ON UPDATE current_timestamp(),
-PRIMARY KEY (nutin_id) )
-ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;*/
 
 create table thematic_section(
 themsec_id int(3) unsigned not null auto_increment, 
@@ -213,7 +205,7 @@ create table cook(
 cook_id int(7) unsigned not null auto_increment, 
 first_name varchar(50) not null, 
 last_name varchar(50) not null,
-phone_number varchar(10) not null unique,                         /*maybe not?*/
+phone_number varchar(10) not null unique,                        
 date_of_birth date not null,  
 years_of_experience int(3) not null, 
 cook_rank varchar(20) not null, 
@@ -225,14 +217,6 @@ constraint valid_years_of_experience check (years_of_experience>=0),
 constraint valid_cook_rank check (cook_rank in('third cook','second cook','first cook','assistant chef','chef')) )
 ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
-create table recipe_cook(
-recipe_id int(7) unsigned not null, 
-cook_id int(7) unsigned not null, 
-last_update timestamp not null default current_timestamp() ON UPDATE current_timestamp(),
-PRIMARY KEY(recipe_id,cook_id),
-FOREIGN KEY (recipe_id) references recipe(recipe_id) ON DELETE restrict ON UPDATE cascade, 
-FOREIGN KEY (cook_id) references cook(cook_id) ON DELETE restrict ON UPDATE cascade)
-ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 create table cook_specialization(
 cook_id int(7) unsigned not null, 
@@ -266,21 +250,13 @@ FOREIGN KEY (season_id) references season(season_id) ON DELETE restrict ON UPDAT
 constraint valid_episode_number check (episode_number between 1 and 10) )
 ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
-/*create table episode_season( 
-episode_id int(7) unsigned not null,
-season_id int(7) unsigned not null,
-last_update timestamp not null default current_timestamp() ON UPDATE current_timestamp(),
-PRIMARY KEY (episode_id),
-FOREIGN KEY (episode_id) references episode(episode_id) ON DELETE restrict ON UPDATE cascade, 
-FOREIGN KEY (season_id) references season(season_id) ON DELETE restrict ON UPDATE cascade)
-ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci; */
 
 create table episode_cook_participant(
 ecp_id int(7) unsigned not null auto_increment,
 episode_id int(7) unsigned not null,
 cook_id int(7) unsigned not null, 
-recipe_id int(7) unsigned not null, #will be picked by the function, so should i have an attribute for them?
-cbc_id int(3) unsigned not null,    #will be picked by the function, so should i have an attribute for them?
+recipe_id int(7) unsigned not null, 
+cbc_id int(3) unsigned not null,   
 last_update timestamp not null default current_timestamp() ON UPDATE current_timestamp(),                            
 PRIMARY KEY (ecp_id),
 FOREIGN KEY (episode_id) references episode(episode_id) ON DELETE restrict ON UPDATE cascade,
@@ -304,8 +280,7 @@ ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 
 /*Create indexes*/
-/* !!!!Index columns frequently used to retrieve data!!!!!
-Do I need multicolumn indexes or unique indexes?*/
+/* !!!!Index columns frequently used to retrieve data!!!!!*/
 
 
 create index idx_fk_ingrigr_id on ingridient(ingrigr_id);
@@ -325,8 +300,6 @@ create index idx_fk_themsec_id on recipe_thematic_section(themsec_id);
 create index idx_fk_recipe_id on recipe_ingridient(recipe_id);
 create index idx_fk_cook_id on cook_specialization(cook_id);
 create index idx_fk_cbc_id on cook_specialization(cbc_id);
--- create index idx_fk_episode_id on episode_season(episode_id);
--- create index idx_fk_season_id on episode_season(season_id);
 create index idx_fk_episode_id on episode_cook_participant(episode_id);
 create index idx_fk_cook_id on episode_cook_participant(cook_id);
 create index idx_fk_recipe_id on episode_cook_participant(recipe_id);
@@ -336,18 +309,8 @@ create index idx_fk_cook_id on episode_cook_judge(cook_id);
 create index idx_fk_episode_cook_participant_id on episode_cook_judge(ecp_id);
 																					
 
-/*Create views*/
-
 
 /*Create functions*/
-
-/*functions for 
-(ok)total cooking time, 
-(ok)recipe type by special ingridient(convert ingri_id to recipe type),
-(ok)calore count per serving, 
-(ok)age, 
-total score for a player from the judges, 
-episode winner*/
 
 
 delimiter $$
@@ -449,65 +412,249 @@ begin
     
 end$$
 
+#1
 
-/*delimiter $$
-create procedure `episode_cook_participant_insert`()
-begin
-	
-   declare @num as int = 0                       
-    SELECT @count=  Count(*) FROM episode;
-	while i < count
-    begin
+SELECT 
+    cook_id, 
+    AVG(judge_score) AS average_judge_score
+FROM 
+    episode_cook_judge;
+GROUP BY 
+    cook_id;
     
-		select distinct recipe.name,recipe.cbc_id,cook.cook_id,cook.first_name,cook.last_name 
-		from recipe
-		join cook_specialization on recipe.cbc_id=cook_specialization.cbc_id 
-		join cook on cook_specialization.cook_id=cook.cook_id
-		group by recipe.cbc_id order by rand() limit 10;
     
-    end
+  SELECT 
+    ecp.cbc_id, 
+    AVG(judge.judge_score) AS average_judge_score
+FROM 
+    episode_cook_judge judge
+JOIN 
+    episode_cook_participant ecp ON judge.ecp_id = ecp.ecp_id
+GROUP BY 
+    ecp.cbc_id;  
+
+#2
+SELECT 
+    cook_id
+FROM 
+    cook_specialization cs
+JOIN 
+    cuisine_by_country cbc ON cs.cbc_id = cbc.cbc_id
+WHERE 
+    cbc.country = 'American'; 
     
-end$$
+   SELECT 
+    DISTINCT ecp.cook_id
+FROM 
+    episode_cook_participant ecp
+JOIN 
+    recipe r ON ecp.recipe_id = r.recipe_id
+JOIN 
+    cuisine_by_country cbc ON r.cbc_id = cbc.cbc_id
+JOIN 
+    episode e ON ecp.episode_id = e.episode_id
+JOIN 
+	season s ON e.season_id = s.season_id
+WHERE 
+    cbc.country = 'American'  -- Replace 'CountryName' with the actual country name
+    AND YEAR(s.season_id) = 2024;  -- Replace Year with the actual year 
 
 
-
-delimiter ; */
-
-DELIMITER //
-
-CREATE PROCEDURE episode_cook_participant_insert()
-BEGIN
-    DECLARE num INT DEFAULT 0;
-    DECLARE episode_count INT DEFAULT 0;
-
-    
-    SELECT COUNT(*) INTO episode_count FROM episode;
-
-    
-    WHILE num < episode_count DO
-       
-        SELECT DISTINCT 
-            recipe.name,
-            recipe.cbc_id,
-            cook.cook_id,
-            cook.first_name,
-            cook.last_name
-        FROM recipe
-        JOIN cook_specialization ON recipe.cbc_id = cook_specialization.cbc_id
-        JOIN cook ON cook_specialization.cook_id = cook.cook_id
-        GROUP BY recipe.cbc_id
-        ORDER BY RAND()
-        LIMIT 10;
+#3 
+WITH CookRecipeCounts AS (
+    SELECT
+        c.cook_id,
+        COUNT(rc.recipe_id) AS recipe_count
+    FROM
+        cook c
+    JOIN
+        recipe_cook rc ON c.cook_id = rc.cook_id
+    WHERE
+		(cook_age(c.cook_id)<30)
         
-        
-        SET num = num + 1;
-    END WHILE;
-END //
+        GROUP BY
+        c.cook_id
+),
+MaxRecipeCount AS (
+    SELECT
+        MAX(recipe_count) AS max_recipe_count
+    FROM
+        CookRecipeCounts
+)
+SELECT
+    crc.cook_id,
+    crc.recipe_count
+FROM
+    CookRecipeCounts crc
+JOIN
+    MaxRecipeCount mrc ON crc.recipe_count = mrc.max_recipe_count; 
+    
+#4
+SELECT c.cook_id, c.first_name, c.last_name
+FROM cook c
+LEFT JOIN episode_cook_judge ecj ON c.cook_id = ecj.cook_id;
+WHERE ecj.judge_score IS NULL;
 
-DELIMITER ;
+#5
+SELECT
+    cj.cook_id
+FROM
+    episode_cook_judge cj
+    JOIN episode e ON cj.episode_id = e.episode_id
+    JOIN season s ON e.season_id = s.season_id
+WHERE
+    s.year = 2024 -- specify the year you are interested in
+GROUP BY
+    cj.cook_id
+HAVING
+    COUNT(cj.episode_id) >= 4;
+    
+ #6   
+SELECT
+    LEAST(re1.etiq_id, re2.etiq_id) AS etiq_id1,
+    GREATEST(re1.etiq_id, re2.etiq_id) AS etiq_id2,
+    COUNT(*) AS pair_count
+FROM
+    recipe_etiquette re1
+JOIN
+    recipe_etiquette re2 ON re1.recipe_id = re2.recipe_id AND re1.etiq_id < re2.etiq_id
+GROUP BY
+    etiq_id1, etiq_id2
+ORDER BY
+    pair_count DESC
+LIMIT 3;    
+    
+#7
+SELECT c1.cook_id, c1.first_name, c1.last_name
+FROM cook c1
+JOIN (
+    SELECT cook_id, COUNT(*) AS participation_count
+    FROM episode_cook_participant
+    GROUP BY cook_id
+) AS participation_counts ON c1.cook_id = participation_counts.cook_id
+JOIN (
+    SELECT cook_id, COUNT(*) AS max_participation_count
+    FROM episode_cook_participant
+    GROUP BY cook_id
+    ORDER BY COUNT(*) DESC
+    LIMIT 1
+) AS max_participation ON 1=1
+WHERE participation_counts.participation_count <= max_participation.max_participation_count - 5;
 
+#8
+SELECT 
+    e.episode_id,
+    COUNT(DISTINCT re.equip_id) AS equipment_count
+FROM 
+    episode e
+    JOIN recipe r ON e.episode_id = r.recipe_id
+    JOIN recipe_equipment re ON r.recipe_id = re.recipe_id
+GROUP BY 
+    e.episode_id
+ORDER BY 
+    equipment_count DESC
+LIMIT 10;
 
-/*Create triggers*/
+#9
+  SELECT 
+    y.year,
+    AVG(grams_carbohydrates_per_serving * portions) AS avg_grams_carbohydrates
+FROM 
+    recipe r
+    JOIN cuisine_by_country cbc ON r.cbc_id = cbc.cbc_id
+    JOIN episode_cook_participant ecp ON cbc.cbc_id = ecp.cbc_id
+    JOIN episode e ON ecp.episode_id = e.episode_id
+    JOIN season y ON e.season_id = y.season_id
+GROUP BY 
+    y.year
+ORDER BY 
+    y.year;
+    
+#10
+WITH ParticipationCount AS (
+    SELECT
+        cb.country,
+        s.year,
+        COUNT(DISTINCT e.episode_id) AS participation_count
+    FROM
+        cuisine_by_country cb
+        JOIN episode_cook_participant ecp ON cb.cbc_id = ecp_id
+        JOIN episode e ON ecp.episode_id = e.episode_id
+        JOIN season s ON e.season_id = s.season_id
+	    
+    GROUP BY
+        cb.country,
+        s.year
+    HAVING
+        COUNT(DISTINCT e.episode_id) > 2
+)
+SELECT 
+    pc1.country,
+    pc1.year AS year1,
+    pc2.year AS year2,
+    pc1.participation_count
+FROM 
+    ParticipationCount pc1
+    JOIN ParticipationCount pc2 ON pc1.country = pc2.country
+    AND pc1.year = pc2.year - 1
+    AND pc1.participation_count = pc2.participation_count
+ORDER BY 
+    pc1.country, 
+    pc1.year;
+    
+ #11
+ 
+ 
+ #12
+WITH EpisodeDifficulty AS (
+    SELECT 
+        e.season_id,
+        e.episode_number,
+        e.episode_id,
+        SUM(r.difficulty_level) AS total_difficulty,
+        ROW_NUMBER() OVER (PARTITION BY e.season_id ORDER BY SUM(r.difficulty_level) DESC) AS row_num
+    FROM 
+        episode e
+    JOIN 
+        episode_cook_participant ecp ON e.episode_id = ecp.episode_id
+    JOIN 
+        recipe r ON ecp.recipe_id = r.recipe_id
+    GROUP BY 
+        e.season_id, e.episode_number, e.episode_id
+)
+SELECT 
+    season_id,
+    episode_number,
+    episode_id,
+    total_difficulty
+FROM 
+    EpisodeDifficulty
+WHERE 
+    row_num = 1;
 
-/*triggers for not having the same cook participant or judge more than 3 times in a row
-e.g. after you insert a film, insert it to the film_info table, so that tou can retrieve its info without having to insert it to the film_info*/
+#14
+SELECT 
+    ts.name,
+    COUNT(*) AS appearance_count
+FROM 
+    recipe_thematic_section rts
+    JOIN thematic_section ts ON rts.themsec_id = ts.themsec_id
+GROUP BY 
+    ts.name
+ORDER BY 
+    appearance_count DESC
+LIMIT 1;
+
+#15
+SELECT 
+    ig.name
+FROM 
+    ingridient_group ig
+    LEFT JOIN ingridient i ON ig.ingrigr_id = i.ingrigr_id
+    LEFT JOIN recipe ri ON i.ingri_id = ri.ingri_id
+WHERE 
+    ri.recipe_id IS NULL
+GROUP BY 
+    ig.name;
+    
+

@@ -606,8 +606,6 @@ insert into recipe_thematic_section(recipe_id,themsec_id) values (1, 8),(2, 1),(
 (14, 4),(15, 8),(16, 8),(17, 8),(18, 3),(19, 2),(20, 2),(21, 4),(22, 6),(23, 4),(24, 8),(25, 1),(26, 7),(27, 3),(28, 3),(29, 8),(30, 2),(31, 4),(32, 6),(33, 4),
 (34, 2),(35, 3),(36, 7),(37, 1),(38, 1),(39, 2),(40, 3),(41, 1),(42, 7),(43, 2),(44, 8),(45, 7),(46, 6),(47, 8),(48, 3),(49, 1),(50, 7);
 
-insert into recipe_cook(recipe_id,cook_id) values ();
-
 insert into cook(first_name,last_name,phone_number,date_of_birth,years_of_experience,cook_rank) values 
 ('David','Glover','(043)026-2','1960-11-21',14,'third cook'),('Lexie','Blick','(152)446-5','2004-06-19',1,'third cook'),
 ('Roma','Howell','(173)033-1','1974-10-25',24,'third cook'),('Dayton','Jacobi','(235)737-2','2002-01-28',3,'third cook'),
@@ -659,14 +657,6 @@ insert into cook(first_name,last_name,phone_number,date_of_birth,years_of_experi
 ('Brooklyn','Murazik','851-375-61','1972-06-01',25,'chef'),('Micheal','Schultz','861-831-61','1996-09-10',2,'chef'),
 ('Maybell','Conn','942-061-86','1973-10-28',22,'chef'),('Camren','Collier','950-890-70','1969-11-19',35,'chef'),
 ('Hank','Osinski','983-341-20','1971-12-07',22,'chef'),('Dallas','Maggio','991-254-86','1974-08-30',6,'chef');
-
-insert into season(season_number) values (1),(2),(3),(4),(5),(6);
-
-insert into episode(season_number,episode_number) values (1,1),(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8),(1,9),(1,10),(2,1),(2,2),(2,3),(2,4),(2,5),(2,6),(2,7),
-(2,8),(2,9),(2,10),(3,1),(3,2),(3,3),(3,4),(3,5),(3,6),(3,7),(3,8),(3,9),(3,10),(4,1),(4,2),(4,3),(4,4),(4,5),(4,6),(4,7),(4,8),(4,9),(4,10),(5,1),(5,2),(5,3),
-(5,4),(5,5),(5,6),(5,7),(5,8),(5,9),(5,10),(6,1),(6,2),(6,3),(6,4),(6,5),(6,6),(6,7),(6,8),(6,9),(6,10);
-
-insert into episode_season(episode_id,season_id) values ();
 
 insert into cook_specialization(cook_id,cbc_id) values (1, 34),(2, 56),(3, 56),(4, 56),(5, 63),(6, 48),(6, 30),(7, 3),(7, 48),(8, 70),(8, 56),(9, 34),(9, 3),
 (10, 3),(10, 51),(11, 30),(11, 48),(12, 4),(12, 51),(13, 43),(13, 4),(13, 18),(14, 36),(14, 48),(14, 3),(15, 15),(15, 36),(15, 28),(16, 4),(16, 15),(16, 56),
@@ -723,3 +713,194 @@ insert into cook_specialization(cook_id,cbc_id) values (1, 34),(2, 56),(3, 56),(
 (100, 18),(100, 63),(100, 33),(100, 34),(100, 4),(100, 15),(100, 51),(100, 28),(100, 36),(100, 3),(100, 68),(100, 70),(100, 59),(100, 30),(100, 48),(100, 38),
 (100, 56),(100, 43);
 
+insert into season(season_number,year) values (1,2024),(2,2025),(3,2026),(4,2027),(5,2028),(6,2029);
+
+insert into episode(episode_id,episode_number,season_id) values (1,1,1),(2,2,1),(3,3,1),(4,4,1),(5,5,1),(6,6,1),(7,7,1),(8,8,1),(9,9,1),(10,10,1),(11,1,2),
+(12,2,2),(13,3,2),(14,4,2),(15,5,2),(16,6,2),(17,7,2),(18,8,2),(19,9,2),(20,10,2),(21,1,3),(22,2,3),(23,3,3),(24,4,3),(25,5,3),(26,6,3),(27,7,3),(28,8,3),
+(29,9,3),(30,10,3),(31,1,4),(32,2,4),(33,3,4),(34,4,4),(35,5,4),(36,6,4),(37,7,4),(38,8,4),(39,9,4),(40,10,4),(41,1,5),(42,2,5),(43,3,5),(44,4,5),(45,5,5),
+(46,6,5),(47,7,5),(48,8,5),(49,9,5),(50,10,5),(51,1,6),(52,2,6),(53,3,6),(54,4,6),(55,5,6),(56,6,6),(57,7,6),(58,8,6),(59,9,6),(60,10,6);
+
+
+/*Create views*/
+
+create view recipe_cook as select cook_id,recipe_id,recipe.cbc_id 
+						   from cook_specialization join recipe on cook_specialization.cbc_id=recipe.cbc_id 
+                           order by cook_id,cbc_id,recipe_id;
+
+/*Create procedure to generate episodes and seasons*/
+                           
+delimiter $$
+create procedure `generate_episodes`(in season_id int)
+begin
+    
+    declare episode_count int;
+    declare r_episode_count int;
+    declare r_episode_id int;
+    declare r_cbc_id int;
+    declare r_cook_id int;
+    declare r_recipe_id int;
+    declare r_judge_id int;
+    declare r_judge_score int;
+    declare r_participant_score_id int;
+    declare r_season_id int;
+    declare i int;
+    declare j int;
+    declare k int;
+    declare a int;
+    declare aa int;
+    declare b int;
+    declare bb int;
+    declare c int;
+    declare cc int;
+
+	drop table if exists temp_country;
+	drop table if exists temp_cooks;
+	drop table if exists temp_recipe;
+
+    -- Temporary tables to track usage counts
+    create temporary table temp_country(cbc_id int(7),usage_count int default 0);
+    create temporary table temp_cooks(cook_id int(7),usage_count int default 0);
+    create temporary table temp_recipe(recipe_id int(7),usage_count int default 0);
+
+    -- initialize usage counts
+    insert into temp_country(cbc_id) select distinct recipe.cbc_id from cuisine_by_country 
+									 join recipe where cuisine_by_country.cbc_id=recipe.cbc_id; 
+    insert into temp_cooks(cook_id) select distinct cook_id from cook_specialization 
+									where cbc_id in (select cbc_id from temp_country);
+    insert into temp_recipe(recipe_id) select distinct recipe_id from recipe_cook;
+
+    
+		set episode_count=(select count(episode_id) from episode where season_id=r_season_id);
+		set r_episode_count=1;
+
+		while (r_episode_count<episode_count+1)
+			do
+				set r_episode_id=(select episode_id from episode where season_id=r_season_id and episode_number=r_episode_count);
+				set i=1;
+				-- select 10 countries, 10 participants and 10 recipes for the episode
+				while (i<11)
+					do	
+						-- select a country
+						select distinct cbc_id into r_cbc_id from temp_country 
+						where cbc_id not in (select cbc_id from episode_cook_participant where episode_id=r_episode_id) and usage_count<3
+						order by rand() limit 1;
+                            
+						-- select a cook participant
+						select cook_id into r_cook_id from temp_cooks 
+						where cook_id not in (select cook_id from episode_cook_participant where episode_id=r_episode_id) and usage_count<3
+						order by rand() limit 1;
+
+						-- select a recipe
+						select recipe_id into r_recipe_id from temp_recipe 
+						where recipe_id not in (select recipe_id from episode_cook_participant where episode_id=r_episode_id) and usage_count<3
+						order by rand() limit 1;
+							
+						-- insert the participant with his/her recipe
+						insert into episode_cook_participant(episode_id,cook_id,cbc_id,recipe_id) values (r_episode_id,r_cook_id,r_cbc_id,r_recipe_id);
+							
+						update temp_country set usage_count=usage_count+1 where cbc_id=r_cbc_id;
+						update temp_cooks set usage_count=usage_count+1 where cook_id=r_cook_id;
+						update temp_recipe set usage_count=usage_count+1 where recipe_id=r_recipe_id;
+							
+						-- go to the next participant
+						set i=i+1;
+				end while;
+					
+				set j=1;
+				-- select 3 judges for the episode
+				while (j<4)
+					do
+						-- select a cook judge
+						select cook_id into r_judge_id from temp_cooks 
+						where cook_id in 
+						(select temp_cooks.cook_id from temp_cooks where
+						temp_cooks.cook_id not in (select cook_id from episode_cook_judge where episode_id=r_episode_id) 
+						and temp_cooks.cook_id not in (select cook_id from episode_cook_participant where episode_id=r_episode_id))
+						and usage_count<3
+						order by rand() limit 1;
+							
+						set k=1;
+						-- set the score from each judge to each participant
+						while(k<11)
+							do
+								-- pick a score
+								select FLOOR(RAND()*(5-1+1))+1 into r_judge_score;
+									
+								-- insert the jude with his/her score for the participant
+								insert into episode_cook_judge(episode_id,cook_id,ecp_id,judge_score) 
+								values (r_episode_id,r_judge_id,10*(r_episode_id-1)+k,r_judge_score);
+									
+								-- go to the next participant
+								set k=k+1;
+						end while;
+									
+						update temp_cooks set usage_count=usage_count+1 where cook_id=r_judge_id;        
+							
+						-- go to the next judge
+						set j=j+1;
+				end while;
+                    
+				if(r_episode_id>1)
+					then
+						set a=(select count(usage_count) from temp_country 
+								where cbc_id in (select cbc_id from episode_cook_participant where episode_id=r_episode_id-1)
+								and cbc_id not in(select cbc_id from episode_cook_participant where episode_id=r_episode_id));
+						set b=(select count(usage_count) from temp_cooks 
+								where cook_id in (select cbc_id from episode_cook_participant where episode_id=r_episode_id-1)
+								and cook_id not in (select cbc_id from episode_cook_participant where episode_id=r_episode_id));
+						set c=(select count(usage_count) from temp_recipe 
+								where recipe_id in (select cbc_id from episode_cook_participant where episode_id=r_episode_id-1)
+								and recipe_id not in (select cbc_id from episode_cook_participant where episode_id=r_episode_id));
+						set aa=1;
+						set bb=1;
+						set cc=1;
+						-- check if a cuisine was used for the last episode but not this one
+						if(a>0)
+							then
+								while(aa<a+1)
+									do
+										update temp_country set usage_count=0 
+										where cbc_id in (select cbc_id from episode_cook_participant where episode_id=r_episode_id-1)
+										and cbc_id not in (select cbc_id from episode_cook_participant where episode_id=r_episode_id);
+										set aa=aa+1;
+								end while;
+						end if;
+						-- check if a cook was used for the last episode but not this one
+						if(b>0)
+							then
+								while(bb<b+1)
+									do
+										update temp_cooks set usage_count=0 
+										where cook_id in (select cook_id from episode_cook_participant where episode_id=r_episode_id-1)
+										and cook_id not in (select cook_id from episode_cook_participant where episode_id=r_episode_id);
+										set bb=bb+1;
+								end while;
+						end if;
+						-- check if a recipe was used for the last episode but not this one
+						if(c>0)
+							then
+								while(cc<c+1)
+									do
+										update temp_recipe set usage_count=0 
+										where recipe_id in (select recipe_id from episode_cook_participant where episode_id=r_episode_id-1)
+										and recipe_id not in (select recipe_id from episode_cook_participant where episode_id=r_episode_id);
+										set cc=cc+1;
+								end while;
+						end if;
+                            
+				end if;
+                    
+				-- go to the next episode
+				set r_episode_count=r_episode_count+1;
+		end while;
+    
+end $$;
+
+delimiter ;
+
+call generate_episodes(1);
+call generate_episodes(2);
+call generate_episodes(3);
+call generate_episodes(4);
+call generate_episodes(5);
+call generate_episodes(6);
