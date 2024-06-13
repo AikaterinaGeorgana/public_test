@@ -418,10 +418,9 @@ SELECT
     cook_id, 
     AVG(judge_score) AS average_judge_score
 FROM 
-    episode_cook_judge;
+    episode_cook_judge
 GROUP BY 
     cook_id;
-    
     
   SELECT 
     ecp.cbc_id, 
@@ -441,7 +440,7 @@ FROM
 JOIN 
     cuisine_by_country cbc ON cs.cbc_id = cbc.cbc_id
 WHERE 
-    cbc.country = 'American'; 
+    cbc.country = 'French'; 
     
    SELECT 
     DISTINCT ecp.cook_id
@@ -456,7 +455,7 @@ JOIN
 JOIN 
 	season s ON e.season_id = s.season_id
 WHERE 
-    cbc.country = 'American'  -- Replace 'CountryName' with the actual country name
+    cbc.country = 'French'  -- Replace 'CountryName' with the actual country name
     AND YEAR(s.season_id) = 2024;  -- Replace Year with the actual year 
 
 
@@ -470,9 +469,8 @@ WITH CookRecipeCounts AS (
     JOIN
         recipe_cook rc ON c.cook_id = rc.cook_id
     WHERE
-		(cook_age(c.cook_id)<30)
-        
-        GROUP BY
+        cook_age(c.cook_id) < 30
+    GROUP BY
         c.cook_id
 ),
 MaxRecipeCount AS (
@@ -488,12 +486,12 @@ FROM
     CookRecipeCounts crc
 JOIN
     MaxRecipeCount mrc ON crc.recipe_count = mrc.max_recipe_count; 
-    
+
 #4
 SELECT c.cook_id, c.first_name, c.last_name
 FROM cook c
-LEFT JOIN episode_cook_judge ecj ON c.cook_id = ecj.cook_id;
-WHERE ecj.judge_score IS NULL;
+LEFT JOIN episode_cook_judge ecj ON c.cook_id = ecj.cook_id
+WHERE ecj.cook_id IS NULL;
 
 #5
 SELECT
@@ -578,7 +576,7 @@ WITH ParticipationCount AS (
         COUNT(DISTINCT e.episode_id) AS participation_count
     FROM
         cuisine_by_country cb
-        JOIN episode_cook_participant ecp ON cb.cbc_id = ecp_id
+        JOIN episode_cook_participant ecp ON cb.cbc_id = ecp.cbc_id
         JOIN episode e ON ecp.episode_id = e.episode_id
         JOIN season s ON e.season_id = s.season_id
 	    
@@ -651,10 +649,10 @@ SELECT
 FROM 
     ingridient_group ig
     LEFT JOIN ingridient i ON ig.ingrigr_id = i.ingrigr_id
-    LEFT JOIN recipe ri ON i.ingri_id = ri.ingri_id
+    LEFT JOIN recipe_ingridient ri ON i.ingri_id = ri.ingri_id
 WHERE 
-    ri.recipe_id IS NULL
+    i.ingri_id IS NULL
 GROUP BY 
     ig.name;
     
-
+    
